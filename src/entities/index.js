@@ -3,11 +3,12 @@ const { makeExecutableSchema } = require('graphql-tools');
 const link = require('./link');
 const user = require('./user');
 const comment = require('./comment');
-const vote = require('./vote');
+// const vote = require('./vote');
 const tag = require('./tag');
+const dateTime = require('./date-time');
 
 // TODO Read modules from disk so we autopopulate this array
-const ENTITIES = [link, user, comment, vote, tag];
+const ENTITIES = [link, user, comment, /*vote,*/ tag, dateTime];
 
 function buildTypeDefinitions(schemaDefinitions) {
 	return `
@@ -31,7 +32,7 @@ function buildResolvers(resolvers) {
 		}
 	}
 
-	if (resolvers.mutations.length) {
+	if (Object.keys(resolvers.mutations).length) {
 		result.Mutation = {
 			...resolvers.mutations
 		}
