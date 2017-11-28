@@ -10,6 +10,24 @@ const dateTime = require('./date-time');
 // TODO Read modules from disk so we autopopulate this array
 const ENTITIES = [link, user, comment, /*vote,*/ tag, dateTime];
 
+function authMiddleware(root, data, context, operation) {
+	if (operation.fieldName !== 'login') {
+		// TODO Check authorization
+		// TODO Use Boom package (https://github.com/hapijs/boom) to raise errors
+		// Boom.unauthorized('Request requires an authenticated user');
+	}
+}
+
+function resolversWithMiddleware(resolvers, middlewares = []) {
+	return resolvers.map(resolver => {
+		return (root, data, context, operation) => {
+			// TODO This only allows sync middlewares and errors must be thrown
+			middlewares.forEach(fn.bind(null, root, data, context, operation));
+			return resolver(root, data, context, operation);
+		}
+	});
+}
+
 function buildTypeDefinitions(schemaDefinitions) {
 	return `
 		${schemaDefinitions.types.join('\n')}
