@@ -2,7 +2,7 @@
 	"name": "linky-api",
 	"version": "1.0.0",
 	"description": "Linky back-end",
-	"main": "index.js",
+	"main": "src/server.js",
 	"scripts": {
 		"dev": "nodemon --inspect ./src/server.js",
 		"start": "node ./src/server.js",
