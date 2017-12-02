@@ -1,5 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const appConfig = require('./config/app-config');
 
 // This package will handle GraphQL server requests and responses
 // based on the provided schema definition
@@ -12,10 +13,10 @@ const connectToMongo = require('./connectors/mongo-connector');
 
 const SERVER_PORT = process.env.LINKY_API_SERVER_PORT || 3003;
 
-const { getEntities, createSchema } = require('./entities/');
+const { getTypes, createSchema } = require('./types/');
 
 async function start() {
-	const mongo = await connectToMongo(getEntities());
+	const mongo = await connectToMongo(getTypes(), appConfig.MONGO_URL);
 	const app = express();
 	const schema = createSchema();
 

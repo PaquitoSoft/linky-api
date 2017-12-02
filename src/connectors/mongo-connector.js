@@ -1,10 +1,7 @@
 const { MongoClient, Logger } = require('mongodb');
 
-// TODO Get form ENV
-const MONGO_URL = 'mongodb://localhost:27017/linky-dev';
-
-module.exports = async (entities, mongoUrl = MONGO_URL) => {
-	const db = await MongoClient.connect(MONGO_URL);
+module.exports = async (entities, mongoUrl) => {
+	const db = await MongoClient.connect(mongoUrl);
 
 	let logCount = 0;
 	Logger.setCurrentLogger((msg, state) => {
