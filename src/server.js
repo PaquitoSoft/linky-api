@@ -21,14 +21,16 @@ async function start() {
 	const schema = createSchema();
 
 	// Route all GraphQL querys here
-	app.post('/graphql', bodyParser.json(), graphqlExpress(async (req/*, res*/) => {
+	app.post('/graphql', bodyParser.json(), graphqlExpress(async (incomingMessage/*, res*/) => {
 		// TODO Read and Validate user
+		const authToken = incomingMessage.headers.authorization;
 		return {
 			context: {
+				authToken: authToken ? /bearer (.*)/i.exec(authToken)[1] : null,
 				mongo
 			},
 			schema
-		}
+		};
 	}));
 
 	// Setup playground interface for development mode
@@ -51,39 +53,13 @@ process.on('unhandledRejection', (reason, p) => {
 // Let the show begin!
 start();
 
-// const start = async () => {
-// 	const mongo = await connectToMongo();
-// 	const app = express();
 
-// 	app.use('/graphql', bodyParser.json(), graphqlExpress(async (req/*, res*/) => {
-// 		const user = await authenticate(req, mongo.Users);
-// 		return {
-// 			context: {
-// 				dataloaders: buildDataLoaders(mongo),
-// 				mongo,
-// 				user
-// 			},
-// 			formatError,
-// 			schema
-// 		}
-// 	}));
-// 	app.use('/graphiql', graphiqlExpress({
-// 		endpointURL: '/graphql',
-// 		passHeader: `'Authorization': 'bearer token-paquitosoftware@gmail.com'`,
-// 		subscriptionsEndpoint: `ws://localhost:${SERVER_PORT}/subscriptions`
-// 	}));
 
-// 	// app.listen(SERVER_PORT, () => {
-// 	// 	console.log(`Hackernews GrapQL server running on SERVER_port ${SERVER_PORT}`);
-// 	// });
-// 	const server = createServer(app);
-// 	server.listen(SERVER_PORT, () => {
-// 		SubscriptionServer.create(
-// 			{ execute, subscribe, schema },
-// 			{ server, path: '/subscriptions' }
-// 		);
-// 		console.log(`Hackernews GrapQL server running on SERVER_port ${SERVER_PORT}`);
-// 	});
-// };
+const jwt = require('jsonwebtoken');
+const { JWT_SECRET_KEY } = require('./config/app-config');
 
-// start();
+// const token = jwt.sign({ uid: '4238746894236875263784562893' }, JWT_SECRET_KEY);
+const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE1MTIyOTAzOTV9.vWb6Wr48ho1Txidf4t46C4hVhKBKdg-rTfmTD1owBhM';
+const decoded = jwt.verify(token, JWT_SECRET_KEY);
+
+console.log(decoded);

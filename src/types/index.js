@@ -1,5 +1,7 @@
 const { readdirSync } = require('fs');
+const jwt = require('jsonwebtoken');
 const { makeExecutableSchema } = require('graphql-tools');
+const { JWT_SECRET_KEY } = require('../config/app-config');
 
 const typeFiles = readdirSync(__dirname);
 const TYPES = typeFiles
@@ -9,8 +11,12 @@ const TYPES = typeFiles
 
 function authMiddleware(root, data, context, operation) {
 	console.log('---------- Runnning auth middleware for operation:', operation.fieldName);
-	if (operation.fieldName !== 'login') {
+	console.log('------ Auth token:', context.authToken);
+	console.log(context);
+	if (operation.fieldName !== '___login') {
 		// TODO Check authorization
+		const decoded = jwt.verify(context.authToken, JWT_SECRET_KEY);
+		console.log(decoded);
 		// TODO Use Boom package (https://github.com/hapijs/boom) to raise errors
 		// Boom.unauthorized('Request requires an authenticated user');
 	}
@@ -22,7 +28,7 @@ function resolverWithMiddleware(resolver, middlewares = []) {
 		// TODO This only allows sync middlewares and errors must be thrown
 		middlewares.forEach(middleware => middleware(root, data, context, operation));
 		return resolver(root, data, context, operation);
-	}
+	};
 }
 
 function resolversWithMiddleware(resolvers, middlewares = []) {
@@ -53,12 +59,12 @@ function buildResolvers(resolvers) {
 		Query: {
 			...resolvers.queries
 		}
-	}
+	};
 
 	if (Object.keys(resolvers.mutations).length) {
 		result.Mutation = {
 			...resolvers.mutations
-		}
+		};
 	}
 
 	return result;

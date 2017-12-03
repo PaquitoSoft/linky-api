@@ -1,3 +1,6 @@
+const jwt = require('jsonwebtoken');
+const { JWT_SECRET_KEY } = require('../config/app-config');
+
 const name = 'User';
 
 const schemaDefinitions = {
@@ -7,6 +10,7 @@ const schemaDefinitions = {
 			createdAt: DateTime!
 			email: String!
 			name: String!
+			token: String
 		}
 	`,
 	mutations: `
@@ -17,7 +21,7 @@ const schemaDefinitions = {
 
 async function login(root, data, context) {
 	const { mongo: { Users } } = context;
-	const { providerType, token } = data;
+	// const { providerType, token } = data;
 
 	// TODO Check auth user in provider
 	const email = 'paquitosoftware@gmail.com';
@@ -36,14 +40,16 @@ async function login(root, data, context) {
 		const mongoResponse = await Users.insert(newUser);
 		user = {
 			...newUser,
-			if: mongoResponse.insertedIds[0]
-		}
+			id: mongoResponse.insertedIds[0]
+		};
 	}
+
+	user.token = jwt.sign({ uid: (user.id || user._id).toString() }, JWT_SECRET_KEY);
 
 	return user;
 }
 
-function logout(root, { accessToken }, context) {
+function logout(/*root, { accessToken }, context*/) {
 	// TODO
 	return true;
 }

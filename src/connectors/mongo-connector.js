@@ -4,7 +4,7 @@ module.exports = async (entities, mongoUrl) => {
 	const db = await MongoClient.connect(mongoUrl);
 
 	let logCount = 0;
-	Logger.setCurrentLogger((msg, state) => {
+	Logger.setCurrentLogger((msg/*, state*/) => {
 		console.log(`MONGODB REQUEST ${++logCount}: ${msg}`);
 	});
 	Logger.setLevel('debug');
