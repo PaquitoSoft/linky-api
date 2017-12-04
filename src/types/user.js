@@ -44,7 +44,8 @@ async function login(root, data, context) {
 		};
 	}
 
-	user.token = jwt.sign({ uid: (user.id || user._id).toString() }, JWT_SECRET_KEY);
+	const userId = { uid: (user.id || user._id).toString() };
+	user.token = jwt.sign(userId, JWT_SECRET_KEY);
 
 	return user;
 }

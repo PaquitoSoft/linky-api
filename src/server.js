@@ -52,14 +52,3 @@ process.on('unhandledRejection', (reason, p) => {
 
 // Let the show begin!
 start();
-
-
-
-const jwt = require('jsonwebtoken');
-const { JWT_SECRET_KEY } = require('./config/app-config');
-
-// const token = jwt.sign({ uid: '4238746894236875263784562893' }, JWT_SECRET_KEY);
-const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE1MTIyOTAzOTV9.vWb6Wr48ho1Txidf4t46C4hVhKBKdg-rTfmTD1owBhM';
-const decoded = jwt.verify(token, JWT_SECRET_KEY);
-
-console.log(decoded);

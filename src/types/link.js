@@ -20,8 +20,11 @@ const schemaDefinitions = {
 
 async function getLinks(root, params, context) {
 	const { mongo: { Links } } = context;
-	const { first = 0, count = 20 } = params;
+	let { first = 0, count = 20 } = params;
 	if (count > 50) count = 20; // Do not allow a client to ask for all the links
+
+	console.log('getLinks# ', context.loggedUser);
+	// throw new Error('Toma petada!');
 
 	return await Links
 		.find({})

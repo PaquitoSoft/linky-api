@@ -1,6 +1,8 @@
 const { readdirSync } = require('fs');
 const jwt = require('jsonwebtoken');
 const { makeExecutableSchema } = require('graphql-tools');
+const { ObjectID } = require('mongodb');
+const Boom = require('boom');
 const { JWT_SECRET_KEY } = require('../config/app-config');
 
 const typeFiles = readdirSync(__dirname);
@@ -10,23 +12,33 @@ const TYPES = typeFiles
 
 
 function authMiddleware(root, data, context, operation) {
-	console.log('---------- Runnning auth middleware for operation:', operation.fieldName);
-	console.log('------ Auth token:', context.authToken);
-	console.log(context);
-	if (operation.fieldName !== '___login') {
-		// TODO Check authorization
-		const decoded = jwt.verify(context.authToken, JWT_SECRET_KEY);
-		console.log(decoded);
-		// TODO Use Boom package (https://github.com/hapijs/boom) to raise errors
-		// Boom.unauthorized('Request requires an authenticated user');
-	}
+	// console.log('---------- Runnning auth middleware for operation:', operation.fieldName);
+	// console.log('------ Auth token:', context.authToken);
+
+	return new Promise((resolve, reject) => {
+		if (operation.fieldName !== 'login') {
+			const decoded = jwt.verify(context.authToken, JWT_SECRET_KEY);
+
+			context.mongo.Users.findOne({ _id: (decoded && decoded.uid) ? new ObjectID(decoded.uid) : null }, (err, user) => {
+				if (err) return reject(err);
+				if (!user) return reject(Boom.unauthorized('Request requires an authenticated user'));
+
+				context.loggedUser = user;
+				resolve(user);
+			});
+		} else {
+			resolve({});
+		}
+	});
+
+
 }
 
-function resolverWithMiddleware(resolver, middlewares = []) {
-	return (root, data, context, operation) => {
-		console.log('Executing wrapped resolver for operation:', operation.fieldName, middlewares);
-		// TODO This only allows sync middlewares and errors must be thrown
-		middlewares.forEach(middleware => middleware(root, data, context, operation));
+function resolverWithMiddlewares(resolver, middlewares = []) {
+	return async (root, data, context, operation) => {
+		for (let middleware of middlewares) {
+			await middleware(root, data, context, operation);
+		}
 		return resolver(root, data, context, operation);
 	};
 }
@@ -34,7 +46,7 @@ function resolverWithMiddleware(resolver, middlewares = []) {
 function resolversWithMiddleware(resolvers, middlewares = []) {
 	return Object.keys(resolvers)
 		.reduce((wrappedResolvers, key) => {
-			wrappedResolvers[key] = resolverWithMiddleware(resolvers[key], middlewares);
+			wrappedResolvers[key] = resolverWithMiddlewares(resolvers[key], middlewares);
 			return wrappedResolvers;
 		}, {});
 }
@@ -87,7 +99,7 @@ module.exports.createSchema = function createSchema() {
 	};
 
 	const typesMap = TYPES.reduce((map, type) => {
-		console.log('Processing type:', type.name);
+		// console.log('Processing type:', type.name);
 
 		const { schemaDefinitions: { types, queries, mutations }, resolvers } = type;
 		const middlewares = [authMiddleware];
