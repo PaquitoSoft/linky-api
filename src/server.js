@@ -21,9 +21,9 @@ async function start() {
 	const schema = createSchema();
 
 	// Route all GraphQL querys here
-	app.post('/graphql', bodyParser.json(), graphqlExpress(async (incomingMessage/*, res*/) => {
+	app.post('/graphql', bodyParser.json(), graphqlExpress(async (req/*, res*/) => {
 		// TODO Read and Validate user
-		const authToken = incomingMessage.headers.authorization;
+		const authToken = req.headers.authorization;
 		return {
 			context: {
 				authToken: authToken ? /bearer (.*)/i.exec(authToken)[1] : null,
