@@ -17,10 +17,4 @@ module.exports = async (entities, mongoUrl) => {
 	}, {});
 
 	return collectionsMap;
-
-	// return {
-	// 	Links: db.collection('links'),
-	// 	Users: db.collection('users'),
-	// 	Votes: db.collection('votes')
-	// }
 };

@@ -1,5 +1,10 @@
 const jwt = require('jsonwebtoken');
+const Boom = require('boom');
 const { JWT_SECRET_KEY } = require('../config/app-config');
+
+const authProviders = {
+	'github': require('../auth-providers/github-provider')
+};
 
 const name = 'User';
 
@@ -14,18 +19,23 @@ const schemaDefinitions = {
 		}
 	`,
 	mutations: `
-		login(providerType: String!, token: String!): User
+		login(providerType: String!, token: String!, hash: String): User
 		logout(accessToken: String!): Boolean
 	`
 };
 
 async function login(root, data, context) {
 	const { mongo: { Users } } = context;
-	// const { providerType, token } = data;
+	const { providerType, token, hash } = data;
 
-	// TODO Check auth user in provider
-	const email = 'paquitosoftware@gmail.com';
-	const name = 'PaquitoSoft';
+	const authProvider = authProviders[providerType];
+
+	if (!authProvider) {
+		throw Boom.badRequest('Invalid auth provider type');
+	}
+
+	// Check auth user in provider
+	const { name, email } = await authProvider(token, hash);
 
 	// Find user in database
 	let user = await Users.findOne({ email });
