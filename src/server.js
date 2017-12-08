@@ -11,6 +11,8 @@ const connectToMongo = require('./connectors/mongo-connector');
 // const buildDataLoaders = require('./data-loaders/data-loaders');
 // const formatError = require('./format-error');
 
+const { GITHUB_CLIENT_ID } = require('./config/app-config');
+
 const SERVER_PORT = process.env.LINKY_API_SERVER_PORT || 3003;
 
 const { getTypes, createSchema } = require('./types/');
@@ -38,6 +40,35 @@ async function start() {
 		app.use('/graphiql', graphiqlExpress({
 			endpointURL: '/graphql'
 		}));
+
+		app.get('/', (req, res) => {
+			res.send(`
+				<html>
+					<head><title>Login with GitHub</title></head>
+					<body>
+						<p>Welcome to GitHub login test page</p>
+						<section>
+							<a href="https://github.com/login/oauth/authorize?scope=user:email&state=${Date.now()}&client_id=${GITHUB_CLIENT_ID}">Login</a>
+						</section>
+					</body>
+				</html>
+			`);
+		});
+		app.get('/callback', (req, res) => {
+			const { code , state } = req.query;
+			res.send(`
+				<html>
+					<head><title>Login with GitHub</title></head>
+					<body>
+						<p><a href="/">Welcome to GitHub login test page</a></p>
+						<section>
+							<p>Code: ${code}</p>
+							<p>State: ${state}</p>
+						</section>
+					</body>
+				</html>
+			`);
+		});
 	}
 
 	app.listen(SERVER_PORT, () => {
