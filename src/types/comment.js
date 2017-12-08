@@ -1,4 +1,4 @@
-const name = 'Comment';
+const name = 'FakeComment';
 
 const schemaDefinitions = {
 	types: `

@@ -15,7 +15,7 @@ module.exports = function authMiddleware(root, data, context, operation) {
 				if (err) return reject(err);
 				if (!user) return reject(Boom.unauthorized('Request requires an authenticated user'));
 
-				context.loggedUser = user;
+				context.user = user;
 				resolve(user);
 			});
 		} else {
