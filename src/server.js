@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const appConfig = require('./config/app-config');
+const loadersBuilder = require('./data-loaders/');
 
 // This package will handle GraphQL server requests and responses
 // based on the provided schema definition
@@ -29,6 +30,7 @@ async function start() {
 		return {
 			context: {
 				authToken: authToken ? /bearer (.*)/i.exec(authToken)[1] : null,
+				dataLoaders: loadersBuilder(mongo),
 				mongo
 			},
 			schema

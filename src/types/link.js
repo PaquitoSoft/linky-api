@@ -220,8 +220,9 @@ const resolvers = {
 	type: {
 		id: root => root._id || root.id,
 		owner: async (root, args, context) => {
-			const { mongo: { Users }} = context;
-			return await Users.findOne({_id: root.owner });
+			const { /*mongo: { Users },*/ dataLoaders: { usersLoader } } = context;
+			// return await Users.findOne({_id: root.owner });
+			return await usersLoader.load(root.owner);
 		},
 		votes: async (root, args, context) => {
 			if (root.votes.length) {
@@ -232,19 +233,21 @@ const resolvers = {
 			return [];
 		},
 		comments: async (root, args, context) => {
-			const { mongo: { Users }} = context;
+			const { dataLoaders: { usersLoader } } = context;
 			for (let comment of root.comments) {
-				comment.user = await Users.findOne({ _id: ObjectID(comment.user.id) });
+				comment.user = await usersLoader.load(ObjectID(comment.user.id));
 			}
 			return root.comments;
 		},
 		tags: async (root, args, context) => {
-			if (root.tags.length) {
-				const { mongo: { Tags }} = context;
-				const tagsIds = root.tags.map(ObjectID);
-				return await Tags.find({ _id: { $in: tagsIds }}).toArray();
+			const { dataLoaders: { tagsLoader } } = context;
+			const tags = [];
+
+			for (let tag of root.tags) {
+				tags.push(await tagsLoader.load(ObjectID(tag)));
 			}
-			return [];
+
+			return tags;
 		}
 	},
 	queries: { searchLinks },
