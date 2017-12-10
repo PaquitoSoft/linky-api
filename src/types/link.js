@@ -39,9 +39,19 @@ const schemaDefinitions = {
 	mutations: `
 		createLink(link: NewLink!): Link!
 		editLink(link: EditLink!): Link!
-		removeLink(linkId: String!): Boolean
+		removeLink(linkId: ID!): Boolean
 	`
 };
+
+function validateLinkMutation(link, { user: currentUser }) {
+	if (!link) {
+		throw Boom.notFound('Link to be edited not found');
+	}
+
+	if (currentUser._id.toString() !== link.owner.toString()) {
+		throw Boom.unauthorized('Only link owner can edit it');
+	}
+}
 
 async function processTags(tagsNames, TagsMongoCollection) {
 	const tags = [];
@@ -107,18 +117,13 @@ async function createLink(root, params, context) {
 }
 
 async function editLink(root, params, context) {
-	const { user, mongo: { Links, Tags } } = context;
-
+	const { mongo: { Links, Tags } } = context;
 	const { link } = params;
+	const linkId = ObjectID(link.id);
 
-	const editedLink = await Links.findOne({ _id: ObjectID(link.id) });
-	if (!editedLink) {
-		throw Boom.notFound('Link to be edited not found');
-	}
+	const editedLink = await Links.findOne({ _id: linkId });
 
-	if (user._id.toString() !== editedLink.owner.toString()) {
-		throw Boom.unauthorized('Only link owner can edit it');
-	}
+	validateLinkMutation(editedLink, context);
 
 	if (link.url !== editedLink.url) {
 		const alreadyExistingLink = await Links.findOne({ url: link.url });
@@ -142,7 +147,16 @@ async function editLink(root, params, context) {
 }
 
 async function removeLink(root, params, context) {
-	return true;
+	const { mongo: { Links } } = context;
+
+	const linkId = ObjectID(params.linkId);
+	const alreadyExistingLink = await Links.findOne({ _id: linkId });
+
+	validateLinkMutation(alreadyExistingLink, context);
+
+	const mongoResponse = await Links.deleteOne({ _id: linkId });
+
+	return mongoResponse.deletedCount > 0;
 }
 
 async function getLinks(root, params, context) {
