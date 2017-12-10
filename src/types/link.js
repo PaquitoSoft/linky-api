@@ -32,9 +32,26 @@ const schemaDefinitions = {
 			url: String
 			tags: [String!]
 		}
+
+		input LinkQueryOrderOption {
+			field: String!
+			isDescending: Boolean!
+		}
+
+		input LinkQueryFilterOption {
+			field: String!
+			values: [String!]
+		}
+
+		input LinkQueryCriteria {
+			first: Int
+			count: Int
+			filter: [LinkQueryFilterOption]
+			order: [LinkQueryOrderOption]
+		}
 	`,
 	queries: `
-		getLinks(first: Int, count: Int): [Link!]!
+		searchLinks(criteria: LinkQueryCriteria): [Link!]!
 	`,
 	mutations: `
 		createLink(link: NewLink!): Link!
@@ -42,6 +59,8 @@ const schemaDefinitions = {
 		removeLink(linkId: ID!): Boolean
 	`
 };
+
+const ORDER_ALLOWED_FIELDS = ['createdAt', 'votes'];
 
 function validateLinkMutation(link, { user: currentUser }) {
 	if (!link) {
@@ -159,16 +178,41 @@ async function removeLink(root, params, context) {
 	return mongoResponse.deletedCount > 0;
 }
 
-async function getLinks(root, params, context) {
+async function searchLinks(root, params, context) {
 	const { mongo: { Links } } = context;
-	let { first = 0, count = 20 } = params;
+	const { criteria: { first = 0, filter, order } } = params;
+	let count = params.count || 20;
 	if (count > 50) count = 50; // Do not allow a client to ask for all the links
 
+	const filterCriteria = (filter || []).reduce((aggregated, filterOption) => {
+		switch (filterOption.field) {
+			case 'owner':
+				aggregated[filterOption.field] = ObjectID(filterOption.values[0]);
+				break;
+			case 'tags':
+				aggregated[filterOption.field] = {
+					$in: filterOption.values.map(ObjectID)
+				};
+		}
+		return aggregated;
+	}, {});
+
+	let orderCriteria = !order || !order.length ?
+		[{ field: 'createdAt', isDescending: true }] : order;
+
+	orderCriteria = orderCriteria
+		.filter(orderOption => {
+			return ORDER_ALLOWED_FIELDS.includes(orderOption.field);
+		})
+		.map(orderOption => {
+			return [orderOption.field, orderOption.isDescending ? -1 : 1];
+		});
+
 	return await Links
-		.find({})
+		.find(filterCriteria)
 		.skip(first)
 		.limit(count)
-		.sort(['createdAt', 1])
+		.sort(orderCriteria)
 		.toArray();
 }
 
@@ -203,7 +247,7 @@ const resolvers = {
 			return [];
 		}
 	},
-	queries: { getLinks },
+	queries: { searchLinks },
 	mutations: {
 		createLink,
 		editLink,
