@@ -1,3 +1,5 @@
+const Boom = require('boom');
+const { ObjectID } = require('mongodb');
 const name = 'Link';
 
 const schemaDefinitions = {
@@ -5,7 +7,7 @@ const schemaDefinitions = {
 		type ${name} {
 			id: ID!
 			url: String!
-			createdAt: Int!
+			createdAt: DateTime!
 			owner: User!
 			votes: [User!]
 			comments: [Comment!]
@@ -13,8 +15,9 @@ const schemaDefinitions = {
 		}
 
 		type Comment {
+			id: ID!
 			user: User!
-			createdAt: Int!
+			createdAt: DateTime!
 			text: String!
 		}
 
@@ -28,8 +31,8 @@ const schemaDefinitions = {
 		getLinks(first: Int, count: Int): [Link!]!
 	`,
 	mutations: `
-		createLink(link: InputLink!): [Link!]!
-		editLink(link: InputLink!): [Link!]!
+		createLink(link: InputLink!): Link!
+		editLink(link: InputLink!): Link!
 		removeLink(linkId: String!): Boolean
 	`
 };
@@ -39,6 +42,7 @@ async function processTags(tagsNames, TagsMongoCollection) {
 	for (let tagName of tagsNames) {
 		let tag = await TagsMongoCollection.find({ name: tagName });
 		if (!tag) {
+			// TODO: Create the tags in this module doesn't feel right
 			tag = { name: tagName, createdAt: Date.now() };
 			const mongoResponse = TagsMongoCollection.insert(tag);
 			tag._id = mongoResponse.insertedIds[0];
@@ -52,6 +56,12 @@ async function createLink(root, params, context) {
 	const { user, mongo: { Links, Tags } } = context;
 
 	const { link } = params;
+
+	const alreadyExistingLink = await Links.findOne({ url: link.url });
+	if (alreadyExistingLink) {
+		throw Boom.conflict('Link already exists');
+	}
+
 	const newLink = {
 		url: link.url,
 		createdAt: Date.now(),
@@ -63,6 +73,7 @@ async function createLink(root, params, context) {
 
 	if (link.comment) {
 		newLink.comments.push({
+			id: ObjectID(),
 			user: user._id,
 			createdAt: Date.now(),
 			text: link.comment
@@ -74,7 +85,7 @@ async function createLink(root, params, context) {
 		newLink.tags = tags.map(tag => tag._id);
 	}
 
-	const mongoResponse = Links.insert(newLink);
+	const mongoResponse = await Links.insert(newLink);
 
 	return {
 		...newLink,
@@ -95,9 +106,6 @@ async function getLinks(root, params, context) {
 	let { first = 0, count = 20 } = params;
 	if (count > 50) count = 20; // Do not allow a client to ask for all the links
 
-	console.log('getLinks# ', context.user);
-	// throw new Error('Toma petada!');
-
 	return await Links
 		.find({})
 		.skip(first)
@@ -108,7 +116,29 @@ async function getLinks(root, params, context) {
 
 const resolvers = {
 	type: {
-		id: root => root._id || root.id
+		id: root => root._id || root.id,
+		owner: async (root, args, context) => {
+			const { mongo: { Users }} = context;
+			return await Users.findOne({_id: root.owner });
+		},
+		votes: async (root, args, context) => {
+			if (root.votes.length) {
+				const { mongo: { Users }} = context;
+				const usersIds = root.votes.map(ObjectID);
+				return await Users.find({ _id: { $in: usersIds }});
+			}
+			return [];
+		},
+		comments: async (root, args, context) => {
+			const { mongo: { Users }} = context;
+			for (let comment of root.comments) {
+				comment.user = await Users.findOne({ _id: ObjectID(comment.user.id) });
+			}
+			return root.comments;
+		},
+		tags: (root, args, context) => {
+			return [];
+		}
 	},
 	queries: { getLinks },
 	mutations: {
