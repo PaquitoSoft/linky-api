@@ -21,9 +21,15 @@ const schemaDefinitions = {
 			text: String!
 		}
 
-		input InputLink {
+		input NewLink {
 			url: String!
 			comment: String
+			tags: [String!]
+		}
+
+		input EditLink {
+			id: ID!
+			url: String
 			tags: [String!]
 		}
 	`,
@@ -31,20 +37,27 @@ const schemaDefinitions = {
 		getLinks(first: Int, count: Int): [Link!]!
 	`,
 	mutations: `
-		createLink(link: InputLink!): Link!
-		editLink(link: InputLink!): Link!
+		createLink(link: NewLink!): Link!
+		editLink(link: EditLink!): Link!
 		removeLink(linkId: String!): Boolean
 	`
 };
 
 async function processTags(tagsNames, TagsMongoCollection) {
 	const tags = [];
+
 	for (let tagName of tagsNames) {
-		let tag = await TagsMongoCollection.find({ name: tagName });
+		let tag = await TagsMongoCollection.findOne({ lowercaseName: tagName.toLowerCase() });
+
 		if (!tag) {
 			// TODO: Create the tags in this module doesn't feel right
-			tag = { name: tagName, createdAt: Date.now() };
-			const mongoResponse = TagsMongoCollection.insert(tag);
+			tag = {
+				name: tagName,
+				lowercaseName: tagName.toLowerCase(),
+				createdAt: Date.now()
+			};
+
+			const mongoResponse = await TagsMongoCollection.insert(tag);
 			tag._id = mongoResponse.insertedIds[0];
 		}
 		tags.push(tag);
@@ -94,7 +107,38 @@ async function createLink(root, params, context) {
 }
 
 async function editLink(root, params, context) {
-	return {};
+	const { user, mongo: { Links, Tags } } = context;
+
+	const { link } = params;
+
+	const editedLink = await Links.findOne({ _id: ObjectID(link.id) });
+	if (!editedLink) {
+		throw Boom.notFound('Link to be edited not found');
+	}
+
+	if (user._id.toString() !== editedLink.owner.toString()) {
+		throw Boom.unauthorized('Only link owner can edit it');
+	}
+
+	if (link.url !== editedLink.url) {
+		const alreadyExistingLink = await Links.findOne({ url: link.url });
+		if (alreadyExistingLink) {
+			throw Boom.conflict('New link URL already existis', { linkId: alreadyExistingLink._id });
+		}
+	}
+
+	editedLink.url = link.url || editedLink.url;
+	if (link.tags) {
+		const tags = await processTags(link.tags, Tags);
+		editedLink.tags = tags.map(tag => tag._id);
+	}
+
+	await Links.updateOne(
+		{ _id: ObjectID(editedLink._id) },
+		{ $set: { url: editedLink.url, tags: editedLink.tags } }
+	);
+
+	return editedLink;
 }
 
 async function removeLink(root, params, context) {
@@ -104,7 +148,7 @@ async function removeLink(root, params, context) {
 async function getLinks(root, params, context) {
 	const { mongo: { Links } } = context;
 	let { first = 0, count = 20 } = params;
-	if (count > 50) count = 20; // Do not allow a client to ask for all the links
+	if (count > 50) count = 50; // Do not allow a client to ask for all the links
 
 	return await Links
 		.find({})
@@ -136,7 +180,12 @@ const resolvers = {
 			}
 			return root.comments;
 		},
-		tags: (root, args, context) => {
+		tags: async (root, args, context) => {
+			if (root.tags.length) {
+				const { mongo: { Tags }} = context;
+				const tagsIds = root.tags.map(ObjectID);
+				return await Tags.find({ _id: { $in: tagsIds }}).toArray();
+			}
 			return [];
 		}
 	},
