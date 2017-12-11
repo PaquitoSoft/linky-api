@@ -1,15 +1,13 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const appConfig = require('./config/app-config');
-const loadersBuilder = require('./data-loaders/');
 
 // This package will handle GraphQL server requests and responses
 // based on the provided schema definition
 const { graphqlExpress, graphiqlExpress } = require('apollo-server-express');
 
 const connectToMongo = require('./connectors/mongo-connector');
-// const { authenticate } = require('./authentication');
-// const buildDataLoaders = require('./data-loaders/data-loaders');
+const appConfig = require('./config/app-config');
+const loadersBuilder = require('./data-loaders/');
 // const formatError = require('./format-error');
 
 const { GITHUB_CLIENT_ID } = require('./config/app-config');
@@ -25,7 +23,6 @@ async function start() {
 
 	// Route all GraphQL querys here
 	app.post('/graphql', bodyParser.json(), graphqlExpress(async (req/*, res*/) => {
-		// TODO Read and Validate user
 		const authToken = req.headers.authorization;
 		return {
 			context: {
@@ -43,6 +40,8 @@ async function start() {
 			endpointURL: '/graphql'
 		}));
 
+		// TODO This is only for testing purposes.
+		// Remove when client is implemented
 		app.get('/', (req, res) => {
 			res.send(`
 				<html>
