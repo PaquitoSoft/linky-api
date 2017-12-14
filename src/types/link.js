@@ -58,6 +58,7 @@ const schemaDefinitions = {
 		editLink(link: EditLink!): Link!
 		removeLink(linkId: ID!): Boolean
 		addLinkComment(linkId: ID!, comment: String!): Comment
+		addLinkVote(linkId: ID!): Link
 	`
 };
 
@@ -236,6 +237,32 @@ async function addLinkComment(root, params, context) {
 	return newComment;
 }
 
+async function addLinkVote(root, params, context) {
+	const { mongo: { Links }, user } = context;
+	const { linkId } = params;
+
+	const link = await Links.findOne({ _id: ObjectID(linkId) });
+
+	if (!link) {
+		throw Boom.notFound('Link to be voted not found');
+	}
+
+	if (user._id.toString() === link.owner.toString()) {
+		throw Boom.preconditionFailed('Owner cannot vote for one of his links');
+	}
+
+	if (link.votes.find(userId => userId.toString() === user._id.toString())) {
+		throw Boom.preconditionFailed('User already voted for this link');
+	}
+
+	await Links.update(
+		{ _id: ObjectID(linkId) },
+		{ $push: { votes: user._id } }
+	);
+
+	return link;
+}
+
 const resolvers = {
 	type: {
 		id: root => root._id || root.id,
@@ -245,12 +272,14 @@ const resolvers = {
 			return await usersLoader.load(root.owner);
 		},
 		votes: async (root, args, context) => {
-			if (root.votes.length) {
-				const { mongo: { Users }} = context;
-				const usersIds = root.votes.map(ObjectID);
-				return await Users.find({ _id: { $in: usersIds }});
+			const { dataLoaders: { usersLoader } } = context;
+			const votes = [];
+
+			for (let userId of root.votes) {
+				votes.push(await usersLoader.load(ObjectID(userId)));
 			}
-			return [];
+
+			return votes;
 		},
 		comments: async (root, args, context) => {
 			const { dataLoaders: { usersLoader } } = context;
@@ -275,7 +304,8 @@ const resolvers = {
 		createLink,
 		editLink,
 		removeLink,
-		addLinkComment
+		addLinkComment,
+		addLinkVote
 	}
 };
 
