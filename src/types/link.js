@@ -57,6 +57,7 @@ const schemaDefinitions = {
 		createLink(link: NewLink!): Link!
 		editLink(link: EditLink!): Link!
 		removeLink(linkId: ID!): Boolean
+		addLinkComment(linkId: ID!, comment: String!): Comment
 	`
 };
 
@@ -216,6 +217,25 @@ async function searchLinks(root, params, context) {
 		.toArray();
 }
 
+async function addLinkComment(root, params, context) {
+	const { mongo: { Links }, user } = context;
+	const { linkId, comment } = params;
+
+	const newComment = {
+		id: ObjectID(),
+		user: user._id,
+		createdAt: Date.now(),
+		text: comment
+	};
+
+	await Links.update(
+		{ _id: ObjectID(linkId) },
+		{ $push: { comments: newComment } }
+	);
+
+	return newComment;
+}
+
 const resolvers = {
 	type: {
 		id: root => root._id || root.id,
@@ -254,7 +274,8 @@ const resolvers = {
 	mutations: {
 		createLink,
 		editLink,
-		removeLink
+		removeLink,
+		addLinkComment
 	}
 };
 
