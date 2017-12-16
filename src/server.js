@@ -4,11 +4,11 @@ const bodyParser = require('body-parser');
 // This package will handle GraphQL server requests and responses
 // based on the provided schema definition
 const { graphqlExpress, graphiqlExpress } = require('apollo-server-express');
+const { formatError } = require('graphql');
 
 const connectToMongo = require('./connectors/mongo-connector');
 const appConfig = require('./config/app-config');
 const loadersBuilder = require('./data-loaders/');
-// const formatError = require('./format-error');
 
 const { GITHUB_CLIENT_ID } = require('./config/app-config');
 
@@ -29,6 +29,12 @@ async function start() {
 				authToken: authToken ? /bearer (.*)/i.exec(authToken)[1] : null,
 				dataLoaders: loadersBuilder(mongo),
 				mongo
+			},
+			formatError: error => {
+				const data = formatError(error);
+				data.statusCode = error.originalError && error.originalError.output ?
+					error.originalError.output.statusCode : 500;
+				return data;
 			},
 			schema
 		};
