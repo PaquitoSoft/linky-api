@@ -1,5 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const cors = require('cors');
 
 // This package will handle GraphQL server requests and responses
 // based on the provided schema definition
@@ -20,6 +21,8 @@ async function start() {
 	const mongo = await connectToMongo(getTypes(), appConfig.MONGO_URL);
 	const app = express();
 	const schema = createSchema();
+
+	app.use(cors());
 
 	// Route all GraphQL querys here
 	app.post('/graphql', bodyParser.json(), graphqlExpress(async (req/*, res*/) => {
