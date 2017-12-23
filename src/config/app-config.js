@@ -7,5 +7,5 @@ module.exports = {
 
 	GITHUB_CLIENT_ID: process.env.LINKY_GITHUB_CLIENT_ID,
 	GITHUB_CLIENT_SECRET: process.env.LINKY_GITHUB_CLIENT_SECRET,
-	GITHUB_CALLBACK_URL: process.env.LINKY_GITHUB_CALLBACK_URL || 'http://localhost:3003/callback'
+	GITHUB_CALLBACK_URL: process.env.LINKY_GITHUB_CALLBACK_URL || 'http://localhost:3000/login-callback'
 };
