@@ -183,7 +183,7 @@ async function removeLink(root, params, context) {
 async function searchLinks(root, params, context) {
 	const { mongo: { Links } } = context;
 	const { criteria: { first = 0, filter, order } } = params;
-	let count = params.count || 20;
+	let count = params.criteria.count || 20;
 	if (count > 50) count = 50; // Do not allow a client to ask for all the links
 
 	const filterCriteria = (filter || []).reduce((aggregated, filterOption) => {
