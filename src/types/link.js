@@ -14,13 +14,6 @@ const schemaDefinitions = {
 			tags: [Tag!]
 		}
 
-		type Comment {
-			id: ID!
-			user: User!
-			createdAt: DateTime!
-			text: String!
-		}
-
 		input NewLink {
 			url: String!
 			comment: String
