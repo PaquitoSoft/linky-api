@@ -51,6 +51,7 @@ const schemaDefinitions = {
 		editLink(link: EditLink!): Link!
 		removeLink(linkId: ID!): Boolean
 		addLinkComment(linkId: ID!, comment: String!): Comment
+		removeLinkComment(linkId: ID!, commentId: ID!): Boolean
 		addLinkVote(linkId: ID!): Link
 	`
 };
@@ -230,6 +231,38 @@ async function addLinkComment(root, params, context) {
 	return newComment;
 }
 
+async function removeLinkComment(root, params, context) {
+	const { mongo: { Links }, user } = context;
+	const { linkId, commentId } = params;
+
+	const link = await Links.findOne({ _id: ObjectID(linkId) });
+
+	if (!link) {
+		throw Boom.notFound('Comment parent link not found');
+	}
+
+	const commentIndex = (link.comments || []).findIndex(comment => comment.id.toString() === commentId);
+
+	if (commentIndex === -1) {
+		throw Boom.notFound('Comment to be removed not found');
+	}
+
+	const commentToBeRemoved = link.comments[commentIndex];
+
+	if (commentToBeRemoved.user.toString() !== user._id.toString()) {
+		throw Boom.unauthorized('Only comment owner can remove it');
+	}
+
+	await Links.update(
+		{ _id: ObjectID(linkId) },
+		{ $pull: { comments: { id: ObjectID(commentId) } } }
+	);
+
+	// TODO Check that the comment has been actually removed
+
+	return true;
+}
+
 async function addLinkVote(root, params, context) {
 	const { mongo: { Links }, user } = context;
 	const { linkId } = params;
@@ -298,6 +331,7 @@ const resolvers = {
 		editLink,
 		removeLink,
 		addLinkComment,
+		removeLinkComment,
 		addLinkVote
 	}
 };
