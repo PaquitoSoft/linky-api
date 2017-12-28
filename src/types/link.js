@@ -52,7 +52,7 @@ const schemaDefinitions = {
 		removeLink(linkId: ID!): Boolean
 		addLinkComment(linkId: ID!, comment: String!): Comment
 		removeLinkComment(linkId: ID!, commentId: ID!): Boolean
-		addLinkVote(linkId: ID!): Link
+		addLinkVote(linkId: ID!): User
 	`
 };
 
@@ -286,7 +286,7 @@ async function addLinkVote(root, params, context) {
 		{ $push: { votes: user._id } }
 	);
 
-	return link;
+	return user;
 }
 
 const resolvers = {
