@@ -1,5 +1,9 @@
+const { URL } = require('url');
 const Boom = require('boom');
 const { ObjectID } = require('mongodb');
+const request = require('request-promise-native');
+const { JSDOM } = require('jsdom');
+
 const name = 'Link';
 
 const schemaDefinitions = {
@@ -7,6 +11,9 @@ const schemaDefinitions = {
 		type ${name} {
 			id: ID!
 			url: String!
+			title: String
+			description: String
+			imageUrl: String
 			createdAt: DateTime!
 			owner: User!
 			votes: [User!]
@@ -17,13 +24,13 @@ const schemaDefinitions = {
 		input NewLink {
 			url: String!
 			comment: String
-			tags: [String!]
+			tags: [ID!]
 		}
 
 		input EditLink {
 			id: ID!
 			url: String
-			tags: [String!]
+			tags: [ID!]
 		}
 
 		input LinkQueryOrderOption {
@@ -57,6 +64,30 @@ const schemaDefinitions = {
 };
 
 const ORDER_ALLOWED_FIELDS = ['createdAt', 'votes'];
+
+async function getLinkMetaData(linkUrl) {
+	// TODO Handle request error
+	const html = await request(linkUrl);
+	const { window: { document } } = new JSDOM(html);
+
+	const titleTag = document.querySelector('title');
+	const titleMeta = document.querySelector('meta[property="og:title"]');
+	const descriptionMeta = document.querySelector('meta[property="og:description"]');
+	const imageMeta = document.querySelector('meta[property="og:image"]');
+
+	// Deal with images with relative URLs
+	let imageUrl = imageMeta ? imageMeta.getAttribute('content') : '';
+	if (imageUrl.startsWith('/')) {
+		const url = new URL(linkUrl);
+		imageUrl = `${url.origin}${imageUrl}`;
+	}
+
+	return {
+		title: titleMeta ? titleMeta.getAttribute('content') : titleTag ? titleTag.text.trim() : '',
+		description: descriptionMeta ? descriptionMeta.getAttribute('content') : '',
+		imageUrl
+	};
+}
 
 function validateLinkMutation(link, { user: currentUser }) {
 	if (!link) {
@@ -95,10 +126,14 @@ async function createLink(root, params, context) {
 
 	const { link } = params;
 
+	// TODO Validate url input is actually a URL
+
 	const alreadyExistingLink = await Links.findOne({ url: link.url });
 	if (alreadyExistingLink) {
 		throw Boom.conflict('Link already exists');
 	}
+
+	const linkMetaData = await getLinkMetaData(link.url);
 
 	const newLink = {
 		url: link.url,
@@ -106,7 +141,8 @@ async function createLink(root, params, context) {
 		owner: user._id,
 		votes: [],
 		comments: [],
-		tags: []
+		tags: [],
+		...linkMetaData
 	};
 
 	if (link.comment) {
