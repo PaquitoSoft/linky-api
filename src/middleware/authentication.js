@@ -9,7 +9,12 @@ module.exports = function authMiddleware(root, data, context, operation) {
 
 	return new Promise((resolve, reject) => {
 		if (operation.fieldName !== 'login') {
-			const decoded = jwt.verify(context.authToken, JWT_SECRET_KEY);
+
+			if (!context.authToken) {
+				return reject(Boom.unauthorized('Auth token must be provided'));
+			}
+
+			const decoded = jwt.verify(context.authToken || '', JWT_SECRET_KEY);
 
 			context.mongo.Users.findOne({ _id: (decoded && decoded.uid) ? new ObjectID(decoded.uid) : null }, (err, user) => {
 				if (err) return reject(err);
