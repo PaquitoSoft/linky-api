@@ -24,7 +24,12 @@ const schemaDefinitions = {
 		input NewLink {
 			url: String!
 			comment: String
-			tags: [ID!]
+			tags: [LinkTag]
+		}
+
+		input LinkTag {
+			id: ID,
+			name: String!
 		}
 
 		input EditLink {
@@ -99,26 +104,28 @@ function validateLinkMutation(link, { user: currentUser }) {
 	}
 }
 
-async function processTags(tagsNames, TagsMongoCollection) {
-	const tags = [];
+async function processTags(tags, TagsMongoCollection) {
+	const _tags = [];
 
-	for (let tagName of tagsNames) {
-		let tag = await TagsMongoCollection.findOne({ lowercaseName: tagName.toLowerCase() });
-
-		if (!tag) {
+	for (let tag of tags) {
+		if (!tag.id) {
 			// TODO: Create the tags in this module doesn't feel right
+			// I also need to check that new tags (the ones with no ID)
+			// does not exist yet
 			tag = {
-				name: tagName,
-				lowercaseName: tagName.toLowerCase(),
+				name: tag.name,
+				lowercaseName: tag.name.toLowerCase(),
 				createdAt: Date.now()
 			};
 
 			const mongoResponse = await TagsMongoCollection.insert(tag);
 			tag._id = mongoResponse.insertedIds[0];
+		} else {
+			tag._id = ObjectID(tag.id);
 		}
-		tags.push(tag);
+		_tags.push(tag);
 	}
-	return tags;
+	return _tags;
 }
 
 async function createLink(root, params, context) {
