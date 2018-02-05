@@ -13,7 +13,7 @@ const loadersBuilder = require('./data-loaders/');
 
 const { GITHUB_CLIENT_ID } = require('./config/app-config');
 
-const SERVER_PORT = process.env.LINKY_API_SERVER_PORT || 3003;
+const SERVER_PORT = process.env.PORT || 3003;
 
 const { getTypes, createSchema } = require('./types/');
 
