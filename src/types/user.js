@@ -38,7 +38,9 @@ async function login(root, data, context) {
 	const { name, email } = await authProvider(token, hash);
 
 	// Find user in database
+	console.log('Looking for user:', email, name);
 	let user = await Users.findOne({ email });
+	console.log('User found:', user);
 
 	// Create the user if it does not already exists
 	if (!user) {
