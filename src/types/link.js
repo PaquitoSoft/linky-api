@@ -342,30 +342,15 @@ const resolvers = {
 		},
 		votes: async (root, args, context) => {
 			const { dataLoaders: { usersLoader } } = context;
-			const votes = [];
-
-			for (let userId of root.votes) {
-				votes.push(await usersLoader.load(ObjectID(userId)));
-			}
-
-			return votes;
+			return await usersLoader.loadMany(root.votes);
 		},
 		comments: async (root, args, context) => {
 			const { dataLoaders: { usersLoader } } = context;
-			for (let comment of root.comments) {
-				comment.user = await usersLoader.load(ObjectID(comment.user.id));
-			}
-			return root.comments;
+			return await usersLoader.loadMany(root.comments);
 		},
 		tags: async (root, args, context) => {
 			const { dataLoaders: { tagsLoader } } = context;
-			const tags = [];
-
-			for (let tag of root.tags) {
-				tags.push(await tagsLoader.load(ObjectID(tag)));
-			}
-
-			return tags;
+			return await tagsLoader.loadMany(root.tags);
 		}
 	},
 	queries: { searchLinks },
