@@ -336,8 +336,7 @@ const resolvers = {
 	type: {
 		id: root => root._id || root.id,
 		owner: async (root, args, context) => {
-			const { /*mongo: { Users },*/ dataLoaders: { usersLoader } } = context;
-			// return await Users.findOne({_id: root.owner });
+			const { dataLoaders: { usersLoader } } = context;
 			return await usersLoader.load(root.owner);
 		},
 		votes: async (root, args, context) => {
@@ -346,7 +345,12 @@ const resolvers = {
 		},
 		comments: async (root, args, context) => {
 			const { dataLoaders: { usersLoader } } = context;
-			return await usersLoader.loadMany(root.comments);
+
+			for (let comment of root.comments) {
+				comment.user = await usersLoader.load(comment.user);
+			}
+
+			return root.comments;
 		},
 		tags: async (root, args, context) => {
 			const { dataLoaders: { tagsLoader } } = context;
