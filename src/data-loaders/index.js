@@ -51,22 +51,27 @@ class TypeLoader {
 			}, { cached: [], pending: [], newKeys: [] });
 
 			// Maybe all keys are already cached or pending
-			let pendingRead;
+			let newReadQuery;
 			if (values.newKeys.length) {
-				pendingRead = this.mongoCollection.find({ _id: { $in: values.newKeys }}).toArray();
+				newReadQuery = this.mongoCollection.find({ _id: { $in: values.newKeys }}).toArray();
 				values.newKeys.forEach(key => {
-					this.queue[key] = pendingRead;
+					this.queue[key] = newReadQuery;
 				});
-
 			} else {
-				pendingRead = Promise.resolve([]);
+				newReadQuery = Promise.resolve([]);
 			}
 
 			Promise.all([
-				pendingRead,
+				newReadQuery,
 				...values.pending
 			])
-				.then(([ newValues, pendingValues = [] ]) => {
+				.then((results) => {
+					let [ newValues, pendingValues = [] ] = results;
+
+					// The pending promise might be from a load() call (a single key) that
+					// returns a single value, so here we need to make sure we manage an array
+					pendingValues = Array.isArray(pendingValues) ? pendingValues : [pendingValues];
+
 					newValues.forEach(newValue => this.cache[newValue._id] = newValue);
 					pendingValues.forEach(pendingValue => delete this.queue[pendingValue._id]);
 					resolve([...newValues, ...pendingValues, ...values.cached]);
