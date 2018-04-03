@@ -18,7 +18,9 @@ class TypeLoader {
 			if (!result) {
 				const pendingRead = this.queue[key];
 				if (pendingRead) {
-					return pendingRead.then(resolve);
+					return pendingRead.then(data => {
+						resolve(Array.isArray(data) ? data[0] : data);
+					});
 				}
 			}
 
