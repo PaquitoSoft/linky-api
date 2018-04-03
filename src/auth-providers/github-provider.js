@@ -1,4 +1,5 @@
 const request = require('request-promise-native');
+const Boom = require('boom');
 const {
 	GITHUB_CLIENT_ID,
 	GITHUB_CLIENT_SECRET,
@@ -12,7 +13,8 @@ module.exports = function githubProvider(token, hash) {
 			client_secret: GITHUB_CLIENT_SECRET,
 			redirect_uri: GITHUB_CALLBACK_URL,
 			code: token,
-			state: hash
+			state: hash,
+			scope: 'user:email read:user'
 		};
 
 		let reqOptions = {
@@ -44,6 +46,11 @@ module.exports = function githubProvider(token, hash) {
 				request(reqOptions)
 					.then(userData => {
 						console.log('User Data:', userData);
+
+						if (!userData.email) {
+							reject(Boom.preconditionFailed('Your GitHub user must have a public email'));
+						}
+
 						resolve(userData);
 					})
 					.catch(reject);

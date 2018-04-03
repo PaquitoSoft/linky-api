@@ -35,7 +35,7 @@ async function login(root, data, context) {
 	}
 
 	// Check auth user in provider
-	const { name, email } = await authProvider(token, hash);
+	const { name, login, email } = await authProvider(token, hash);
 
 	// Find user in database
 	console.log('Looking for user:', email, name);
@@ -46,7 +46,7 @@ async function login(root, data, context) {
 	if (!user) {
 		const newUser = {
 			email,
-			name,
+			name: name || login || email,
 			createdAt: Date.now()
 		};
 		const mongoResponse = await Users.insert(newUser);
